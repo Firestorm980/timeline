@@ -20,30 +20,22 @@
         defaults = {
             events: [], // JSON array of events.
             template: pluginDefaultTemplate, // Template to use to render event. function?
-
             vertical: false, // Orientation
-
             speed: 1000, // Animation
-
             directionNav: true, // Previous / Next navigation
             directionNavContainer: null, // Selector for nav to be built in
             directionNextText: 'Next',
             directionPreviousText: 'Previous',
-
             eventNav: true, // Single event nav (dots)
             eventNavBranch: 'master',
             eventNavContainer: null, // Selector for nav to be built in
-
             keyboard: true, // Bind keyboard arrow keys
-
             continuePast: false, // Add styles to 'extend' tl
             continueFuture: false,
-
             startAt: null, // Accepts a Date object and tries to 'start' the tl at that position
             zoom: 1,
-        };
-
-    var frame = false;
+        },
+        frame = false;
 
     // The actual plugin constructor
     function Plugin( element, options ) {
@@ -77,6 +69,8 @@
                 return false;
             }
 
+            instance._setRAF.call(instance);
+
             // Set up events, branches, timelines, extremes
             instance._setAll.call(instance);
             // Make the base HTML
@@ -91,6 +85,9 @@
             if ( instance.settings.eventNav ){
                 instance._constructEventNav.call(this);
             }
+
+
+            instance._bindEvents.call(this);
         },
 
         _construct: function(){
@@ -100,8 +97,6 @@
             var zoom = instance.settings.zoom * 100;
             var HTML_array = ['<div class="tl__scroller">','<div class="tl__branches" style="width: '+zoom+'%;">'];
             var direction_class = ( !instance.settings.vertical ) ? 'tl--horizontal' : 'tl--vertical';
-
-
             var branches_HTML = instance._constructBranches.call(this);
 
             HTML_array.push(branches_HTML);
@@ -134,7 +129,7 @@
 
                 var branch_style = ( is_horizontal ) ? 'margin-left: '+branch_offset+'%; width: '+branch_length+'%' : 'margin-top: '+branch_offset+'%; height: '+branch_length+'%';
 
-                var branch_HTML = ['<div class="tl__branch tl__'+branch_name+'" data-tl-branch="'+branch_name+'" style="'+branch_style+'">','<span class="tl__line"></span>','<span class="tl__line tl__line-active"></span>','<ul class="tl__events">','</ul>','</div>'];
+                var branch_HTML = ['<div class="tl__branch tl__'+branch_name+'" data-tl-branch="'+branch_name+'" style="'+branch_style+'" data-tl-offset="'+branch_offset+'" data-tl-length="'+branch_length+'">','<span class="tl__line"></span>','<span class="tl__line tl__line-active"></span>','<ul class="tl__events">','</ul>','</div>'];
 
                 branches_HTML_array = branches_HTML_array.concat( branch_HTML );
             }
@@ -351,7 +346,11 @@
          * Specifically bind to the native events and use requestAnimationFrame to throttle them to our plugin events.
          */
         _bindEvents: function(){
+            var instance = this;
+            var $element = jQuery(instance.element);
+            var $scroller = $element.find('.tl__scroller');
 
+            $scroller.on('scroll', function(){ instance._rAFScroll.call(instance); });
         },
 
         /**
@@ -378,13 +377,18 @@
          */
         _rAFScroll: function( event ){
             var instance = this;
-            var $element = jQuery(instance.element);
 
             if ( !frame ){
                 frame = true;
 
-                requestAnimFrame( function(){ 
-                    $element.trigger(pluginName + '.scroll');
+                requestAnimFrame( function(){                     
+
+                    instance._tlScroll.update_branches.call( instance );
+
+
+
+                    //$element.trigger(pluginName + '.scroll');
+                    frame = false;
                 });
             }
         },
@@ -403,6 +407,35 @@
 
 
         _tlScroll: {
+            update_branches: function(){
+                var instance = this;
+                var $element = jQuery(instance.element);
+                var $scroller = $element.find('.tl__scroller');
+                var scroller_progress = ( !instance.settings.vertical ) ? $scroller.scrollLeft() : $scroller.scrollTop();
+                var scroller_length = ( !instance.settings.vertical ) ? $scroller.outerWidth() : $scroller.outerHeight();
+                var scroller_percent = scroller_progress / scroller_length * 100;
+                var $branches = $scroller.find('.tl__branch');
+
+                $branches.each(function(index, el) {
+                    var $branch = jQuery(this);
+                    var $progress = $branch.find('.tl__line-active');
+                    var branch_offset = parseFloat( $branch.attr('data-tl-offset') );
+                    var branch_length = parseFloat( $branch.attr('data-tl-length') );
+                    var branch_range_start = branch_offset;
+                    var branch_range_end = branch_offset + branch_length;
+                    var branch_percent_raw = (scroller_percent - branch_range_start) / ( branch_length / 100 );
+                    var branch_percent = 0;
+
+                    if ( branch_percent_raw > 100 ){ branch_percent = 100; }
+                    else if ( branch_percent_raw < 0 ){ branch_percent = 0; }
+                    else { branch_percent = branch_percent_raw; }
+
+                    var transform = ( !instance.settings.vertical ) ? 'scaleX('+ ( branch_percent / 100 ) +')' : 'scaleY('+ ( branch_percent / 100 ) +')';
+
+                    $branch.data( 'plugin_' + pluginName + '_percent', branch_percent );
+                    $progress.css({ transform: transform });
+                });
+            },
             to_event: function( index ){
 
             },

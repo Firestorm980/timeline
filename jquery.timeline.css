@@ -2,6 +2,11 @@
 
 .tl {
 	display: block;
+	box-sizing: border-box;
+}
+
+.tl * {
+	box-sizing: border-box;
 }
 
 .tl--vertical {
@@ -14,7 +19,8 @@
 .tl__scroller {
 	display: block;
 	width: 100%;
-	overflow-x: scroll;
+	overflow-x: auto;
+	overflow-y: visible;
 }
 
 .tl__branches {
@@ -77,7 +83,6 @@
 	margin-top: -0.75em;
 	margin-left: -0.75em;
 
-	transform: scale(0.75);
 	transition-property: background-color, border-color, transform;
 	transition-duration: 300ms;
 	transition-timing-function: ease-in-out;
@@ -88,9 +93,7 @@
 }
 .tl__event.is-past {
 	border-color: orange;
-	transform: scale(1);
 }
 .tl__event.is-selected {
 	background-color: orange;
-	transform: scale(1);
 }
