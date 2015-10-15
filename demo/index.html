@@ -15,10 +15,9 @@
 
 		<link href='https://fonts.googleapis.com/css?family=Roboto:400,700,700italic,400italic' rel='stylesheet' type='text/css'>
 
-		<link rel="stylesheet" href="jquery.timeline.css">		
+		<link rel="stylesheet" href="../dist/jquery.timeline.css">		
 
-		
-
+		<!--<link rel="stylesheet" href="styles.css">-->
 
     </head>
     <body>
@@ -37,6 +36,11 @@
 				</div>
 			</div>-->
 		</div>
+
+
+<pre><code id="console">
+	
+</code></pre>
 
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.js"></script>
 		
@@ -58,23 +62,57 @@
 			{ date: new Date(2013, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
 			{ date: new Date(2014, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
 			{ date: new Date(2015, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
+
+
+			{ date: new Date(1908, 6, 29), branch: 'titanic', data: { details: 'Design approved' } },
+			{ date: new Date(1909, 2, 31), branch: 'titanic', data: { details: 'Keel laid' } },
+			{ date: new Date(1911, 4, 31), branch: 'titanic', data: { details: 'Hull launched' } },
+			{ date: new Date(1912, 2, 31), branch: 'titanic', data: { details: 'Fitting completed' } },
+			{ date: new Date(1912, 3, 2), branch: 'titanic', data: { details: 'Sea trials' } },
+			{ date: new Date(1912, 3, 3), branch: 'titanic', data: { details: 'Arrial at Southampton' } },
+			{ date: new Date(1912, 3, 10), branch: 'titanic', data: { details: 'Passengers arrive and board. Launch.' } },
+			{ date: new Date(1912, 3, 11), branch: 'titanic', data: { details: 'Arrial at Queenstown, Ireland' } },
+			{ date: new Date(1912, 3, 14), branch: 'titanic', data: { details: 'Stikes iceberg' } },
+			{ date: new Date(1912, 3, 15), branch: 'titanic', data: { details: 'Sinks' } },
+			{ date: new Date(1912, 3, 18), branch: 'titanic', data: { details: 'Carpathia arrives in NY' } },
+
 		];
 		</script>
 
 
-	    <script src="jquery.timeline.js"></script>
+    <script src="../dist/jquery.timeline.js"></script>
 
-	    <script>
-	      jQuery(document).ready(function($) {
-	        
-	        $('#timeline').timeline({ events: timeline_events, zoom: 2 });
+    <script>
+      jQuery(document).ready(function($) {
+        
+        $('#timeline').timeline({ 
+        	events: timeline_events, 
 
+            vertical: false, // Orientation
+            centerProgress: true, // Centers the timeline so that the progress bar is always centered during scroll
 
-	        $('#timeline').on('timeline.scroll', function(event){ 
+            animation: true, // Animate scrolling
+            animationSpeed: 1000, // Animation speed
 
-	        });
+            directionNav: true, // Previous / Next navigation
+            directionNavContainer: null, // Selector for nav to be built in
+            directionNavBranch: null, // Keep it only in the specified branch
+            directionNextText: 'Next',
+            directionPreviousText: 'Previous',
 
-	      });
-	    </script>
+            eventNav: true, // Single event nav (dots)
+            eventNavBranch: 'master', // Branch that those events should navigate
+            eventNavContainer: null, // Selector for nav to be built in
+
+            keyboard: true, // Bind keyboard arrow keys
+            
+            continuePast: false, // Add styles to 'extend' tl
+            continueFuture: false, // Add styles to 'extend' tl
+            startDate: null, // Accepts a Date object and tries to 'start' the tl at that position
+            zoom: 2, // "Zoom" in on the timeline
+        });
+
+      });
+    </script>
     </body>
 </html>

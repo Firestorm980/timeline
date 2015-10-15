@@ -21,19 +21,22 @@
             events: [], // JSON array of events.
             template: pluginDefaultTemplate, // Template to use to render event. function?
             vertical: false, // Orientation
-            speed: 1000, // Animation
+            centerProgress: false, // Centers the timeline so that the progress bar is always centered during scroll
+            animation: false, // Animate scrolling
+            animationSpeed: 1000, // Animation speed
             directionNav: true, // Previous / Next navigation
             directionNavContainer: null, // Selector for nav to be built in
+            directionNavBranch: null, // Keep it only in the specified branch
             directionNextText: 'Next',
             directionPreviousText: 'Previous',
             eventNav: true, // Single event nav (dots)
-            eventNavBranch: 'master',
+            eventNavBranch: 'master', // Branch that those events should navigate
             eventNavContainer: null, // Selector for nav to be built in
             keyboard: true, // Bind keyboard arrow keys
             continuePast: false, // Add styles to 'extend' tl
-            continueFuture: false,
-            startAt: null, // Accepts a Date object and tries to 'start' the tl at that position
-            zoom: 1,
+            continueFuture: false, // Add styles to 'extend' tl
+            startDate: null, // Accepts a Date object and tries to 'start' the tl at that position
+            zoom: 1, // "Zoom" in on the timeline
         },
         frame = false;
 
@@ -52,7 +55,12 @@
         base._defaults = defaults;
         base._name = pluginName;
 
-        base._data = {};
+        base._data = {
+            date: {},
+            branches: [],
+            timelines: {},
+            scroller: {}
+        };
 
         base._init();
 
@@ -86,8 +94,17 @@
                 instance._constructEventNav.call(this);
             }
 
-
+            // Bind events
             instance._bindEvents.call(this);
+
+            // Go to the start date, if supplied
+            if ( instance.settings.startDate !== null && instance.settings.startDate instanceof Date ){
+                instance._tlScroll.to_date.call( this, instance.settings.startDate );
+            }
+            // Otherwise go to the oldest date
+            else {
+                instance._tlScroll.to_date.call( this, new Date( instance._data.date.oldest ) );
+            }
         },
 
         _construct: function(){
@@ -97,6 +114,7 @@
             var zoom = instance.settings.zoom * 100;
             var HTML_array = ['<div class="tl__scroller">','<div class="tl__branches" style="width: '+zoom+'%;">'];
             var direction_class = ( !instance.settings.vertical ) ? 'tl--horizontal' : 'tl--vertical';
+            var center_class = ( instance.settings.centerProgress ) ? 'tl--center-progress' : '';
             var branches_HTML = instance._constructBranches.call(this);
 
             HTML_array.push(branches_HTML);
@@ -104,15 +122,15 @@
             HTML_array = HTML_array.concat(['</div>','</div>']);
             HTML = HTML_array.join('\n');
 
-            $element.addClass('tl').addClass(direction_class).html(HTML);
+            $element.addClass('tl').addClass(direction_class).addClass(center_class).html(HTML);
         },
         _constructBranches: function(){
             var instance = this;
             var branches = instance._data.branches;
             var timelines = instance._data.timelines;
             var is_horizontal = ( !instance.settings.vertical );
-            var start_date = instance._data.oldest;
-            var end_date = instance._data.newest;
+            var start_date = instance._data.date.oldest;
+            var end_date = instance._data.date.newest;
             var branches_HTML_array = [];
             var branches_HTML = '';
 
@@ -143,7 +161,8 @@
             var $element = jQuery(element);
             var settings = instance.settings;
             var directionNavContainer = instance.settings.directionNavContainer;
-            var HTML_array = ['<div class="tl__direction-nav">','<button type="button" class="btn btn--tl tl__previous">', instance.settings.directionPreviousText,'</button>','<button type="button" class="btn btn--tl tl__next">',instance.settings.directionNextText,'</button>','</div>'];
+            var directionNavBranch = ( instance.settings.directionNavBranch !== null ) ? 'data-tl-branch="'+directionNavBranch+'"' : '';
+            var HTML_array = ['<div class="tl__direction-nav">','<button type="button" class="btn btn--tl tl__previous" '+directionNavBranch+'>', instance.settings.directionPreviousText,'</button>','<button type="button" class="btn btn--tl tl__next">',instance.settings.directionNextText,'</button>','</div>'];
             var HTML = HTML_array.join('\n');
 
             if ( directionNavContainer !== null && jQuery(directionNavContainer).length ){
@@ -167,7 +186,7 @@
             // Loop through branch events
             for (var i = 0; i < events.length; i++) {
                 var event_object = events[i];
-                var event_HTML = ['<li class="tl__event-nav-item">','<button type="button" class="btn btn--tl-event-nav tl__event-nav-btn" data-tl-event-index="'+i+'" data-tl-event-branch="'+eventNavBranch+'">','</button>','</li>'];
+                var event_HTML = ['<li class="tl__event-nav-item">','<button type="button" class="btn btn--tl-event-nav tl__event-nav-btn" data-tl-event-date="'+event_object.date.getTime()+'" data-tl-event-branch="'+eventNavBranch+'">','</button>','</li>'];
                 // Add event navigation
                 // The index should tell us what the button will "link" to
                 // The branch will tell us what timeline we're looking at
@@ -216,7 +235,7 @@
             // Loop through all events
             for (var i = events.length - 1; i >= 0; i--) {
                 var event_object = events[i];
-                var event_date = event_object.date.getTime();
+              var event_date = event_object.date.getTime();
                 // Push the date in milliseconds
                 event_dates.push( event_date );
             }
@@ -257,8 +276,8 @@
             var extremes = instance._getMinMaxDates.call( this, events );
 
             // Add the dates to our instance data
-            instance._data.oldest = extremes.oldest;
-            instance._data.newest = extremes.newest;
+            instance._data.date.oldest = extremes.oldest;
+            instance._data.date.newest = extremes.newest;
         },
         _setBranches: function(){
             var instance = this;
@@ -338,14 +357,42 @@
             var instance = this;
             var $element = jQuery(instance.element);
             var $scroller = $element.find('.tl__scroller');
-            var $previous = $element.find('.tl__previous');
-            var $next = $element.find('.tl__next');
-            var $event_nav_item_btn = $element.find('.tl__event-nav-item-btn');
+
+            var direction_nav_container = instance.settings.directionNavContainer;
+            var $direction_nav_container = ( direction_nav_container !== null ) ? jQuery(direction_nav_container) : $element;
+            var $previous = $direction_nav_container.find('.tl__previous');
+            var $next = $direction_nav_container.find('.tl__next');
+
+            var event_nav_container = instance.settings.eventNavContainer;
+            var $event_nav_container = ( event_nav_container !== null ) ? jQuery(event_nav_container) : $element;
+            var $event_nav_item_btn = $event_nav_container.find('.tl__event-nav-btn');
 
             $scroller.on('scroll', function(){ instance._rAFScroll.call(instance); });
+            $previous.on('click', function(){ instance._tlNav.previous.call(instance); } );
+            $next.on('click', function(){ instance._tlNav.next.call(instance); } );
+            $event_nav_item_btn.on('click', function(){ 
+                var $button = jQuery(this);
+                var branch = $button.attr('data-tl-event-branch');
+                var event_date_time = parseInt( $button.attr('data-tl-event-date') );
 
-            $previous.on('click', function(){} );
-            $next.on('click', function(){} );
+                instance._tlNav.item.call(instance, branch, event_date_time); 
+            });
+
+            if ( instance.settings.keyboard ){
+                jQuery(document).on('keydown', function(event){
+                    var keyCode = event.keyCode;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    switch(keyCode){
+                        case 37: // Left
+                            instance._tlNav.previous.call(instance);
+                            break;
+                        case 39: // Right
+                            instance._tlNav.next.call(instance);
+                            break;
+                    }
+                });
+            }
         },
 
         /**
@@ -373,12 +420,24 @@
         _rAFScroll: function( event ){
             var instance = this;
 
+
             if ( !frame ){
                 frame = true;
 
-                requestAnimFrame( function(){                     
-                    instance._tlScroll.update_branches.call( instance );
+                requestAnimFrame( function(){
+                    var $element = jQuery(instance.element);
+                    var $scroller = $element.find('.tl__scroller');
+                    var scroller_progress = ( !instance.settings.vertical ) ? $scroller.scrollLeft() : $scroller.scrollTop();
+                    var scroller_length = ( !instance.settings.vertical ) ? $scroller.outerWidth() : $scroller.outerHeight();
+                    var scroller_percent = scroller_progress / scroller_length * 100;
 
+                    instance._data.scroller.progress = scroller_progress;
+                    instance._data.scroller.percent = scroller_percent;
+
+                    instance._tlScroll.update_date.call( instance );
+                    instance._tlScroll.update_branches.call( instance );
+                    instance._tlScroll.update_events.call( instance );
+                    instance._event.call( instance, 'scroll' );
                 });
             }
         },
@@ -387,9 +446,24 @@
          * Should fire on window load, as well as the instance container's scrolling and resizing events.
          * Includes jQuery events and callback function firing (so the user can do either event based or callback based).
          */
-        _event: function(){
+        _event: function( type ){
         	var instance = this;
+            var $element = jQuery(instance.element);
 
+            switch( type ){
+                case 'scroll':
+
+                    // Create an event object
+                    var event_object = {
+                        type: pluginName + '.' + type,
+                        current_date: instance._data.date.current,
+                        percent: instance._data.scroller.percent
+                    };
+                    // Trigger our special scroll event
+                    $element.trigger( event_object );
+
+                    break;
+            }
 
             // The event is complete. We're ready to do another.
             frame = false;
@@ -397,26 +471,23 @@
 
 
         _tlScroll: {
+            update_date: function(){
+                var instance = this;
+                var scroller_percent = instance._data.scroller.percent;
+
+                // Get the current date in milliseconds
+                var current_date_time = parseInt( (scroller_percent / 100) * ( instance._data.date.newest - instance._data.date.oldest) + instance._data.date.oldest );
+                // Save the current date
+                instance._data.date.current = current_date_time;
+            },
             update_branches: function(){
                 var instance = this;
                 var $element = jQuery(instance.element);
                 var $scroller = $element.find('.tl__scroller');
-                var scroller_progress = ( !instance.settings.vertical ) ? $scroller.scrollLeft() : $scroller.scrollTop();
-                var scroller_length = ( !instance.settings.vertical ) ? $scroller.outerWidth() : $scroller.outerHeight();
-                var scroller_percent = scroller_progress / scroller_length * 100;
                 var $branches = $scroller.find('.tl__branch');
+                var scroller_percent = instance._data.scroller.percent;
 
-                var current_date_time = parseInt( (scroller_percent / 100) * ( instance._data.newest - instance._data.oldest) + instance._data.oldest );
-                var current_date = new Date(current_date_time);
-
-                var event_object = {
-                    type: pluginName + '.scroll',
-                    current_date: current_date,
-                    percent: scroller_percent
-                };
-
-                $element.data( 'plugin_' + pluginName + '_date', current_date );
-
+                // Set the progress bar for each branch
                 $branches.each(function(index, el) {
                     var $branch = jQuery(this);
                     var $progress = $branch.find('.tl__line-active');
@@ -427,44 +498,158 @@
                     var branch_percent_raw = (scroller_percent - branch_range_start) / ( branch_length / 100 );
                     var branch_percent = 0;
 
+                    // The branch could be out of range. Keep it in range.
                     if ( branch_percent_raw > 100 ){ branch_percent = 100; }
                     else if ( branch_percent_raw < 0 ){ branch_percent = 0; }
                     else { branch_percent = branch_percent_raw; }
 
+                    // Calculate the transform the progress bar
                     var transform = ( !instance.settings.vertical ) ? 'scaleX('+ ( branch_percent / 100 ) +')' : 'scaleY('+ ( branch_percent / 100 ) +')';
 
+                    // Save the percent
                     $branch.data( 'plugin_' + pluginName + '_percent', branch_percent );
+                    // Transform the bar
                     $progress.css({ transform: transform });
                 });
-
-                $element.trigger( event_object );
-                frame = false;
             },
-            to_event: function( index, branch ){
+            update_events: function(){
                 var instance = this;
-                var branch = ( branch !== undefined ) ? branch : 'master';
-                var element = instance.element;
-                var $element = jQuery(element);                
-                var $event_nav = $element.find('.tl__event-nav');
-                var $event_nav_item = $event_nav.find('.tl__event-nav-item[data-tl-event-branch="'+branch+'"]');
+                var $element = jQuery(instance.element);
+                var events = instance._data.events;
 
-                var $branches = $element.find('.tl__branches');
-                var $branch = $branches.find('[data-tl-branch="'+branch+'"]');
-                var $events = $branch.find('.tl__events');
-                var $event = $events.find('.tl__event').eq(index);
+                var current_date_time = instance._data.date.current;
+
+                for (var i = 0; i < events.length; i++) {
+                    var event_date = events[i].date;
+                    var event_date_time = event_date.getTime();
+
+                    var event_date_time_next = ( events[i+1] !== undefined ) ? events[i+1].date.getTime() : instance._data.date.newest;
+                    var event_date_time_previous = ( events[i-1] !== undefined ) ? events[i-1].date.getTime() : instance._data.date.oldest;
+
+                    var $event_current = $element.find('.tl__event[data-event-date="'+event_date_time+'"]');
+                    var $event_next = $element.find('.tl__event[data-event-date="'+event_date_time_next+'"]');
+                    var $event_previous = $element.find('.tl__event[data-event-date="'+event_date_time_previous+'"]');
+
+
+                    if ( event_date_time > current_date_time ){
+                        $event_current.addClass('is-future').removeClass('is-past');
+                    }
+                    else {
+                        $event_current.removeClass('is-future').addClass('is-past');
+                    }
+
+                    if ( event_date_time <= current_date_time && current_date_time <= event_date_time_next && current_date_time >= event_date_time_previous ){
+                        $event_current.addClass('is-current');
+                        instance._data.date.current_event = event_date_time;
+                        instance._tlScroll.update_event_nav.call( instance, event_date_time );
+                    }
+                    else {
+                        $event_current.removeClass('is-current');
+                    }
+                }
+            },
+            update_event_nav: function( event_date_time ){
+                var instance = this;
+                var branch = instance.settings.eventNavBranch;
+                var $element = jQuery(instance.element);
+                var $event_nav_container = ( instance.settings.eventNavContainer !== null ) ? jQuery(instance.settings.eventNavContainer) : $element ;
+                var $event_nav = $event_nav_container.find('.tl__event-nav');
+                var $events = $event_nav.find('.tl__event-nav-btn');
+                var $event_current = $event_nav.find('.tl__event-nav-btn[data-tl-event-branch="'+branch+'"][data-tl-event-date="'+event_date_time+'"]');
 
                 $events.removeClass('is-active');
-                $event.addClass('is-active');
-
+                $event_current.addClass('is-active');
             },
             to_date: function( date ){
+                var instance = this;
+                var $element = jQuery(instance.element);
+                var $scroller = $element.find('.tl__scroller');
+                var scroller_length = ( !instance.settings.vertical ) ? $scroller.outerWidth() : $scroller.outerHeight();
+                var start_date = instance._data.date.oldest;
+                var end_date = instance._data.date.newest;
 
+                // Target date
+                var to_date = date.getTime();
+
+                // How far should the scroller go?
+                var scroller_percent = ( to_date - start_date ) / ( end_date - start_date ); 
+
+                // Final scroll position in px
+                // Ceiling is to force the scroller to actually go on or past the event.
+                // The scroll bar can only go to intergers, while many of our scroll_to would result in fractions.
+                // This keeps the dates fairly accurate in calls, but may cause problems in some instances.
+                // @todo: find a way to make this more accurate while keeping functionality
+                var scroll_to = Math.ceil( scroller_percent * scroller_length ); 
+
+                // Go there
+                if ( !instance.settings.vertical ){
+                    if ( !instance.settings.animation ){
+                        $scroller.scrollLeft( scroll_to );
+                    }
+                    else {
+                        $scroller.stop(true, false).animate({ scrollLeft: scroll_to }, instance.settings.animationSpeed );
+                    }
+                }
+                else {
+                    if ( !instance.settings.animation ){
+                        $scroller.scrollTop( scroll_to );
+                    }
+                    else {
+                        $scroller.stop(true, false).animate({ scrollTop: scroll_to }, instance.settings.animationSpeed );
+                    }
+                }
+
+                $scroller.trigger('scroll');
             },
-            previous: function(){
+            previous: function( arg_branch ){
+                var instance = this;
+                var $element = jQuery(instance.element);
+                var events = instance._data.events;
+                var current_date_time = instance._data.date.current;
+                var current_event = instance._data.date.current_event;
+                var branches = instance._data.branches;
+                var branch = ( arg_branch !== undefined && branches.indexOf(arg_branch) > -1 ) ? arg_branch : false;
 
+                for (var i = events.length - 1; i >= 0; i--) {
+                    var this_event = events[i];
+                    var this_event_date = this_event.date;
+                    var this_event_date_time = this_event_date.getTime();
+                    var this_event_branch = this_event.branch;
+
+                    if ( branch === false && this_event_date_time < current_date_time && this_event_date_time !== current_event ){
+                        instance._tlScroll.to_date.call( this, this_event_date );
+                        break;
+                    }
+                    else if ( this_event_branch === branch && this_event_date_time < current_date_time && this_event_date_time !== current_event ) {
+                        instance._tlScroll.to_date.call( this, this_event_date );
+                        break;
+                    }
+                };
             },
-            next: function(){
+            next: function( arg_branch ){
+                var instance = this;
+                var $element = jQuery(instance.element);
+                var events = instance._data.events;
+                var current_date_time = instance._data.date.current;
+                var current_event = instance._data.date.current_event;
+                var branches = instance._data.branches;
+                var branch = ( arg_branch !== undefined && branches.indexOf(arg_branch) > -1 ) ? arg_branch : false;
 
+                for (var i = 0; i < events.length; i++) {
+                    var this_event = events[i];
+                    var this_event_date = this_event.date;
+                    var this_event_date_time = this_event_date.getTime();
+                    var this_event_branch = this_event.branch;
+
+                    if ( branch === false && this_event_date_time > current_date_time && this_event_date_time !== current_event ){
+                        instance._tlScroll.to_date.call( this, this_event_date );
+                        break;
+                    }
+                    else if ( this_event_branch === branch && this_event_date_time > current_date_time && this_event_date_time !== current_event ) {
+                        instance._tlScroll.to_date.call( this, this_event_date );
+                        break;
+                    }
+                };
             },
         },
 
@@ -495,7 +680,39 @@
             },
             remove: function(){
 
+            },
+            to: function( index, arg_branch ){
+                var instance = this;
+                var events_all = instance._data.events;
+                var branch = ( arg_branch !== undefined && instance._data.branches.indexOf(branch) > -1 ) ? arg_branch : instance.settings.eventNavBranch;
+                var events_branch = instance._data.timelines[branch].events;
+
+                var event_object = events_branch[index];
+                var event_date = events_object.date;
+
+                instance._tlScroll.to_date( event_date );
             }
+        },
+
+        _tlNav: {
+            next: function(){
+                var instance = this;
+                var branch = ( instance.settings.directionNavBranch !== null ) ? instance.settings.directionNavBranch : undefined;
+
+                instance._tlScroll.next.call( this, branch );
+            },
+            previous: function(){
+                var instance = this;
+                var branch = ( instance.settings.directionNavBranch !== null ) ? instance.settings.directionNavBranch : undefined;
+
+                instance._tlScroll.previous.call( this, branch );
+            },
+            item: function( branch, event_date_time ){
+                var instance = this;
+                var event_date = new Date( event_date_time );
+
+                instance._tlScroll.to_date.call( this, event_date );
+            },
         },
 
         /**
@@ -503,16 +720,18 @@
          * ==============
          */
 
-        next: function(){
+        next: function( arg_branch ){
+            var instance = this;
+            var branch = ( arg_branch !== undefined && instance._data.branches.indexOf(branch) > -1 ) ? arg_branch : instance.settings.eventNavBranch;
 
+            instance._tlScroll.next.call( this, branch );
         },
 
-        previous: function(){
+        previous: function( arg_branch ){
+            var instance = this;
+            var branch = ( arg_branch !== undefined && instance._data.branches.indexOf(branch) > -1 ) ? arg_branch : instance.settings.eventNavBranch;
 
-        },
-
-        to: function(){
-
+            instance._tlScroll.previous.call( this, branch );
         },
 
         destroy: function(){
@@ -527,6 +746,9 @@
                 case 'remove':
 
                     break;
+                case 'to':
+
+                    break;
                 default:
                     console.error('Not a valid event action.');
                     break;
@@ -536,11 +758,53 @@
         update: function(){
 
         },
+        /**
+         * Get the zoom level or sets the zoom level of the timeline on request.
+         * @param  {Number} number [The new zoom to set the timeline to]
+         * @return {Number} [The current zoom level of the timeline]
+         */
+        zoom: function( number ){
+            var instance = this;
+            var element = instance.element;
+            var $element = jQuery(element);
+            var $scroller = $element.find('.tl__scroller');
+            var $branches = $element.find('.tl__branches');
+            var scroller_width = $scroller.outerWidth();
+            var branches_width = $branches.outerWidth();
+            // Get the current zoom
+            var current_zoom = branches_width / scroller_width;
+            // Only use the new zoom if it is a number, bigger than 0, and not the same as the current
+            var zoom = ( !isNaN(number) && number > 0 && number !== current_zoom ) ? number : current_zoom;
 
-        zoom: function(){
+            if ( number === undefined || isNaN(number) || number === current_zoom ) {
+                // Get the zoom
+                return zoom;
+            }
+            else {
+                // Set the zoom
+                $branches.css({ width: zoom*100+'%' });                
+            }
+        },
+        /**
+         * Gets the current date of the timeline or sets the timeline on a date specified
+         * 
+         * @param {Date} date [The date you want to set the timeline to]
+         * @return {Date} [The date object of the current date of the timeline]
+         */
+        date: function( date ){
+            var instance = this;
+            var current_date_time = instance._data.date.current;
+            var current_date = new Date( current_date_time );
 
+            if ( date !== undefined && date instanceof Date ){
+                // Set the date
+                instance._tlScroll.to_date.call( this, date );
+            }
+            else {
+                // Get the date
+                return current_date;
+            }
         }
-
     });
 
     // A really lightweight plugin wrapper around the constructor,
@@ -548,6 +812,7 @@
     $.fn[ pluginName ] = function ( options ) {
         var args = Array.prototype.slice.call( arguments, 1);
         var result = null;
+
         this.each(function() {
             // Cache the instance of the plugin on this element
             var instance = $.data( this, "plugin_" + pluginName );

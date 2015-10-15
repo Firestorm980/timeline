@@ -9,26 +9,19 @@
 	box-sizing: border-box;
 }
 
-.tl--vertical {
-
-}
-.tl--horizontal {
-
-}
 
 .tl__scroller {
 	display: block;
 	width: 100%;
-	overflow-x: auto;
-	overflow-y: visible;
+	height: 100%;
 }
 
 .tl__branches {
 	display: block;
 	width: 100%;
 	padding: 1em;
-
 }
+
 
 .tl__branch {
 	position: relative;
@@ -69,13 +62,18 @@
 .tl__event {
 	position: absolute;
 
+	top: 0;
+	left: 0;
 
-
+	display: block;
 }
 
 
 
-
+/**
+ * Markers
+ * -------
+ */
 .tl__event-marker {
 	height: 1.25em;
 	width: 1.25em;
@@ -92,7 +90,7 @@
 	margin-top: 0.125em;
 
 	transform: translate(-50%, -50%);
-	transition-property: background-color, border-color, transform;
+	transition-property: background-color, border-color, border-radius;
 	transition-duration: 300ms;
 	transition-timing-function: ease-in-out;
 }
@@ -100,19 +98,19 @@
 	cursor: pointer;
 	border-color: black;
 }
-.tl__event.tl__event--future .tl__event-marker {
+.tl__event.is-future .tl__event-marker {
 	border-style: dashed;
 	border-radius: 0;
 }
 .tl__event.is-past .tl__event-marker {
 	border-color: orange;
 }
-.tl__event.is-selected .tl__event-marker {
+.tl__event.is-current .tl__event-marker {
 	background-color: orange;
 }
 
 
-.tl__event-content {
+.tl__event-content {/*
 	position: absolute;
 	top: 100%;
 	left: 0;
@@ -127,7 +125,9 @@
 
 	visibility: hidden;
 	opacity: 0;
-	transform: scale(0);
+	transform: scale(0);*/
+
+	display: none;
 }
 
 
@@ -157,6 +157,31 @@
 	background-color: #999;
 	cursor: pointer;
 }
-.tl__event-nav-btn.active {
+.tl__event-nav-btn.is-active {
 	background-color: orange;
+}
+
+
+.tl--vertical {
+
+}
+.tl--vertical .tl__scroller {
+	overflow-x: hidden;
+	overflow-y: auto;
+}
+.tl--vertical.tl--center-progress .tl__branches {
+	padding-top: 50%;
+	padding-bottom: 50%;
+}
+.tl--horizontal {
+
+}
+.tl--horizontal .tl__scroller {
+	overflow-x: auto;
+	overflow-y: hidden;
+}
+
+.tl--horizontal.tl--center-progress .tl__branches {
+	padding-left: 50%;
+	padding-right: 50%;
 }
