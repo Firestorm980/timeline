@@ -106,7 +106,6 @@
 
             $element.addClass('tl').addClass(direction_class).html(HTML);
         },
-
         _constructBranches: function(){
             var instance = this;
             var branches = instance._data.branches;
@@ -138,7 +137,6 @@
 
             return branches_HTML;
         },
-
         _constructDirectionNav: function(){
             var instance = this;
             var element = instance.element;
@@ -155,7 +153,6 @@
                 $element.append(HTML);
             }
         },
-
         _constructEventNav: function(){
             var instance = this;
             var element = instance.element;
@@ -170,7 +167,7 @@
             // Loop through branch events
             for (var i = 0; i < events.length; i++) {
                 var event_object = events[i];
-                var event_HTML = ['<li class="tl__event-nav-item">','<button type="button" class="btn btn--tl-event-nav tl__event-nav" data-tl-event-index="'+i+'" data-tl-event-branch="'+eventNavBranch+'">','</button>','</li>'];
+                var event_HTML = ['<li class="tl__event-nav-item">','<button type="button" class="btn btn--tl-event-nav tl__event-nav-btn" data-tl-event-index="'+i+'" data-tl-event-branch="'+eventNavBranch+'">','</button>','</li>'];
                 // Add event navigation
                 // The index should tell us what the button will "link" to
                 // The branch will tell us what timeline we're looking at
@@ -187,7 +184,6 @@
                 $element.append(HTML);
             }
         },
-
         _contructEvents: function(){
             var instance = this;
             var element = instance.element;
@@ -237,7 +233,6 @@
             var timeline = instance._data.timelines[ branch_name ];
             var start_date = timeline.oldest;
             var end_date = timeline.newest;
-            var current_date = new Date().getTime();
             var event_date = event_data.date.getTime();
             var position = ( event_date - start_date ) / ( end_date - start_date ) * 100;
             
@@ -255,7 +250,6 @@
             // Organize events by branches
             instance._setTimelines.call(instance);
         },
-
         _setMinMaxDates: function(){
             var instance = this;
             var settings = instance.settings;
@@ -266,9 +260,6 @@
             instance._data.oldest = extremes.oldest;
             instance._data.newest = extremes.newest;
         },
-
-
-
         _setBranches: function(){
             var instance = this;
             var settings = instance.settings;
@@ -293,7 +284,6 @@
             // Add branches to our instance data
             instance._data.branches = branches;            
         },
-
         _setEvents: function(){
             var instance = this;
             var settings = instance.settings;
@@ -315,7 +305,6 @@
             // Add a copy of our sorted events
             instance._data.events = temp_events;
         },
-
         _setTimelines: function(){
             var instance = this;
             var settings = instance.settings;
@@ -349,8 +338,14 @@
             var instance = this;
             var $element = jQuery(instance.element);
             var $scroller = $element.find('.tl__scroller');
+            var $previous = $element.find('.tl__previous');
+            var $next = $element.find('.tl__next');
+            var $event_nav_item_btn = $element.find('.tl__event-nav-item-btn');
 
             $scroller.on('scroll', function(){ instance._rAFScroll.call(instance); });
+
+            $previous.on('click', function(){} );
+            $next.on('click', function(){} );
         },
 
         /**
@@ -382,13 +377,8 @@
                 frame = true;
 
                 requestAnimFrame( function(){                     
-
                     instance._tlScroll.update_branches.call( instance );
 
-
-
-                    //$element.trigger(pluginName + '.scroll');
-                    frame = false;
                 });
             }
         },
@@ -416,6 +406,17 @@
                 var scroller_percent = scroller_progress / scroller_length * 100;
                 var $branches = $scroller.find('.tl__branch');
 
+                var current_date_time = parseInt( (scroller_percent / 100) * ( instance._data.newest - instance._data.oldest) + instance._data.oldest );
+                var current_date = new Date(current_date_time);
+
+                var event_object = {
+                    type: pluginName + '.scroll',
+                    current_date: current_date,
+                    percent: scroller_percent
+                };
+
+                $element.data( 'plugin_' + pluginName + '_date', current_date );
+
                 $branches.each(function(index, el) {
                     var $branch = jQuery(this);
                     var $progress = $branch.find('.tl__line-active');
@@ -435,8 +436,25 @@
                     $branch.data( 'plugin_' + pluginName + '_percent', branch_percent );
                     $progress.css({ transform: transform });
                 });
+
+                $element.trigger( event_object );
+                frame = false;
             },
-            to_event: function( index ){
+            to_event: function( index, branch ){
+                var instance = this;
+                var branch = ( branch !== undefined ) ? branch : 'master';
+                var element = instance.element;
+                var $element = jQuery(element);                
+                var $event_nav = $element.find('.tl__event-nav');
+                var $event_nav_item = $event_nav.find('.tl__event-nav-item[data-tl-event-branch="'+branch+'"]');
+
+                var $branches = $element.find('.tl__branches');
+                var $branch = $branches.find('[data-tl-branch="'+branch+'"]');
+                var $events = $branch.find('.tl__events');
+                var $event = $events.find('.tl__event').eq(index);
+
+                $events.removeClass('is-active');
+                $event.addClass('is-active');
 
             },
             to_date: function( date ){

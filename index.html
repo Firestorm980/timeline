@@ -13,9 +13,13 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
 
-    <link rel="stylesheet" href="jquery.timeline.css">
+		<link href='https://fonts.googleapis.com/css?family=Roboto:400,700,700italic,400italic' rel='stylesheet' type='text/css'>
 
-		<link rel="stylesheet" href="styles.css">
+		<link rel="stylesheet" href="jquery.timeline.css">		
+
+		
+
+
     </head>
     <body>
 
@@ -48,159 +52,29 @@
 			{ date: new Date(2015, 10, 20), branch: 'master', data: { location: 'Brooklyn Park, MN', name: 'Birthday!', content: 'It is gonna be my birthday!', id: 6 }},
 
 
-      { date: new Date(2010, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
-      { date: new Date(2011, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
-      { date: new Date(2012, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
-      { date: new Date(2013, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
-      { date: new Date(2014, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
-      { date: new Date(2015, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
+			{ date: new Date(2010, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
+			{ date: new Date(2011, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
+			{ date: new Date(2012, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
+			{ date: new Date(2013, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
+			{ date: new Date(2014, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
+			{ date: new Date(2015, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
 		];
 		</script>
 
 
-    <script src="jquery.timeline.js"></script>
+	    <script src="jquery.timeline.js"></script>
 
-    <script>
-      jQuery(document).ready(function($) {
-        
-        $('#timeline').timeline({ events: timeline_events });
-
-      });
-    </script>
+	    <script>
+	      jQuery(document).ready(function($) {
+	        
+	        $('#timeline').timeline({ events: timeline_events, zoom: 2 });
 
 
-		<script>
-/*
-			jQuery(document).ready(function($){
-				timeline.init();
+	        $('#timeline').on('timeline.scroll', function(event){ 
 
-				jQuery('#timeline').on('scroll', function(){
-					var scroller_width = $(this).outerWidth();
-					var scroller_x = $(this).scrollLeft();
-					var scroller_percent = ( scroller_x / scroller_width );
+	        });
 
-					var $events = $(this).find('.event');
-
-					$events.removeClass('is-active');
-
-          var past_events = [];
-
-          for (var i = 0; i < $events.length - 1; i++) {
-            var this_event = $events[i];
-            var $event = jQuery(this_event);
-            var event_percent = parseFloat( $event.attr('data-percent') );
-
-            if ( event_percent <= scroller_percent ){
-              $event.addClass('is-past');
-              past_events.push($event);
-            }
-            else {
-              $event.removeClass('is-past');
-            }
-
-          }
-
-          var $active_event = past_events.pop();
-
-          $active_event.addClass('is-active');
-
-					$('.timeline__line-active').css({ transform: 'scaleX('+ scroller_percent +')' });
-				});
-
-
-				jQuery('[data-event]').on('click', function(){
-					var event_index = parseInt( $(this).attr('data-event') );
-					var branch = $(this).attr('data-timeline');
-					var $timeline = $('[data-timeline-name="'+branch+'"]');
-					var $events = $timeline.find('.timeline__events');
-					var $event = $events.find('.event').eq(event_index);
-					var position = parseFloat($event.attr('data-percent'));
-					var $masterTimeline = $timeline.parents('.timeline');
-
-					//$masterTimeline.scrollLeft( $masterTimeline.outerWidth() * position);
-
-          $masterTimeline.animate({ scrollLeft: $masterTimeline.outerWidth() * position }, 1000);
-
-					//$event.addClass('is-active');
-				});
-
-        jQuery('[data-next-event]').on('click', function(){
-          var $timeline = jQuery('#timeline');
-          var $events = $timeline.find('.event');
-          var $active_event = $timeline.find('.event.is-active');
-          var $next_event = $active_event.next();
-
-          if ( $next_event.length ){
-            var position = parseFloat( $next_event.attr('data-percent') );
-            $events.removeClass('is-active');
-            $timeline.animate({ scrollLeft: $timeline.outerWidth() * position }, 1000, function(){ $next_event.addClass('is-active'); });
-          }
-
-        });
-        jQuery('[data-previous-event]').on('click', function(){
-          var $timeline = jQuery('#timeline');
-          var $events = $timeline.find('.event');
-          var $active_event = $timeline.find('.event.is-active');
-          var $previous_event = $active_event.prev();
-
-          if ( $previous_event.length ){
-            var position = parseFloat( $previous_event.attr('data-percent') );
-            $events.removeClass('is-active');
-            $timeline.animate({ scrollLeft: $timeline.outerWidth() * position }, 1000, function(){ $previous_event.addClass('is-active'); });
-          }
-        });
-
-        jQuery('#timeline').trigger('scroll');
-			});
-
-			var timeline = {
-				init: function(){
-
-					timeline_events.sort(function(a, b){
-						if ( a.date.getTime() > b.date.getTime() ){
-							return 1;
-						}
-						else if ( a.date.getTime() < b.date.getTime() ){
-							return -1;
-						}
-						else {
-							return 0;
-						}
-					});
-
-
-					var current_date = new Date().getTime();
-					var event_dates = [];
-
-					for (var i = 0; i < timeline_events.length; i++) {
-						var event_obj = timeline_events[i];
-						var event_date = event_obj.date.getTime();
-						event_dates.push( event_date );
-					}
-
-					var start_date = Math.min.apply(this, event_dates );
-					var end_date = Math.max.apply(this, event_dates );
-
-					var HTML = '';
-
-					for (var i = 0; i < timeline_events.length; i++) {
-						var event_obj = timeline_events[i];
-						var event_date = event_obj.date.getTime();
-						var event_human_date = date_format('F j, Y', event_obj.date);
-						var position = ( event_date - start_date ) / ( end_date - start_date ) * 100;
-						var isFuture = ( ( event_date - start_date ) > ( current_date - start_date ) );
-						var futureClass = (isFuture) ? 'event--future' : '';
-
-						HTML += '<li class="event '+futureClass+'" data-percent="'+position/100+'" data-date="'+event_human_date+'" style="left: '+position+'%;"></li>';
-					}
-
-					$('#timeline .timeline__events').html(HTML);
-
-				}
-			};
-
-}
-*/
-		</script>
+	      });
+	    </script>
     </body>
 </html>

@@ -27,6 +27,7 @@
 	display: block;
 	width: 100%;
 	padding: 1em;
+
 }
 
 .tl__branch {
@@ -66,34 +67,96 @@
 }
 
 .tl__event {
-	height: 1.5em;
-	width: 1.5em;
+	position: absolute;
+
+
+
+}
+
+
+
+
+.tl__event-marker {
+	height: 1.25em;
+	width: 1.25em;
 	border-radius: 50%;
 	top: 50%;
-
-	overflow: hidden;
 	position: absolute;
 
 	background-color: white;
 	border-style: solid;
-	border-width: 3px;
+	border-width: 2px;
 	border-color: silver;
 	box-shadow: 0 0 0 2px white;
 
-	margin-top: -0.75em;
-	margin-left: -0.75em;
+	margin-top: 0.125em;
 
+	transform: translate(-50%, -50%);
 	transition-property: background-color, border-color, transform;
 	transition-duration: 300ms;
 	transition-timing-function: ease-in-out;
 }
-.tl__event.tl__event--future {
+.tl__event-marker:hover {
+	cursor: pointer;
+	border-color: black;
+}
+.tl__event.tl__event--future .tl__event-marker {
 	border-style: dashed;
 	border-radius: 0;
 }
-.tl__event.is-past {
+.tl__event.is-past .tl__event-marker {
 	border-color: orange;
 }
-.tl__event.is-selected {
+.tl__event.is-selected .tl__event-marker {
+	background-color: orange;
+}
+
+
+.tl__event-content {
+	position: absolute;
+	top: 100%;
+	left: 0;
+
+	padding: 1em;
+
+	border-radius: 0.25em;
+
+	background-color: black;
+	color: white;
+	z-index: 1;
+
+	visibility: hidden;
+	opacity: 0;
+	transform: scale(0);
+}
+
+
+.tl__event-nav {
+	list-style: none;
+	padding: 0;
+	text-align: center;
+}
+.tl__event-nav-item {
+	display: inline-block;	
+}
+.tl__event-nav-btn {
+	padding: 0;
+	display: block;
+	font-size: 0;
+	height: 1rem;
+	width: 1rem;
+	border: none;
+	border-radius: 50%;
+	background-color: #ccc;
+
+	transition-property: background-color;
+	transition-duration: 300ms;
+	transition-timing-function: ease-in-out;
+}
+.tl__event-nav-btn:hover {
+	background-color: #999;
+	cursor: pointer;
+}
+.tl__event-nav-btn.active {
 	background-color: orange;
 }
