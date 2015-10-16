@@ -7,7 +7,7 @@
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <title>
-        	
+        	jQuery.Timeline
         </title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15,37 +15,40 @@
 
 		<link href='https://fonts.googleapis.com/css?family=Roboto:400,700,700italic,400italic' rel='stylesheet' type='text/css'>
 
+		<link rel="stylesheet" href="normalize.css">
 		<link rel="stylesheet" href="../dist/jquery.timeline.css">		
 
-		<!--<link rel="stylesheet" href="styles.css">-->
+		<link rel="stylesheet" href="styles.css">
 
     </head>
     <body>
 
 
-		<p>Testing the timeline</p>
+		<div class="container">
+			<h1>Timeline</h1>
+			<div id="timeline">
+			</div>
 
-		<div id="timeline"><!--
-			<div class="timeline__scroller">
-				<div class="timeline__branch timeline__master" data-timeline-name="master">
-					<span class="timeline__line"></span>
-					<span class="timeline__line timeline__line-active"></span>
-					<ul class="timeline__events">
 
-					</ul>
-				</div>
-			</div>-->
+			<div id="controls">
+				<button class="nav" data-direction="previous" data-branch="master" type="button">Previous (master)</button>
+				<button class="nav" data-direction="next" data-branch="master" type="button">Next (master)</button>
+
+				<button class="nav" data-direction="previous" data-branch="new-year" type="button">Previous (new-year)</button>
+				<button class="nav" data-direction="next" data-branch="new-year" type="button">Next (new-year)</button>
+			</div>
+
 		</div>
 
 
-<pre><code id="console">
-	
-</code></pre>
+
+		
 
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.js"></script>
 		
 		<script>
 		var timeline_events = [
+			// Master
 			{ date: new Date(2015, 9, 21), branch: 'master', data: { location: 'Hill Valley, CA', name: 'Arrival', content: 'Marty and Doc arrive!', id: 7 } },
 			{ date: new Date(1986, 8, 17), branch: 'master', data: { location: 'Roseville, MN', name: 'Birth', content: 'Becky was born this day.', id: 0  } },
 			{ date: new Date(1987, 10, 20), branch: 'master', data: { location: 'Roseville, MN', name: 'Birth', content: 'I was born this day.', id: 1  } },
@@ -54,16 +57,16 @@
 			{ date: new Date(2010, 9, 1), data: { location: 'Brooklyn Park, MN', name: 'Married', content: 'I was married on this day.', id: 4  } },
 			{ date: new Date(2014, 6, 26), branch: 'master', data: { location: 'Roseville, MN', name: 'Birth', content: 'I was born this day.', id: 5 } },
 			{ date: new Date(2015, 10, 20), branch: 'master', data: { location: 'Brooklyn Park, MN', name: 'Birthday!', content: 'It is gonna be my birthday!', id: 6 }},
-
-
+			// New Years
+			
 			{ date: new Date(2010, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
 			{ date: new Date(2011, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
 			{ date: new Date(2012, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
 			{ date: new Date(2013, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
 			{ date: new Date(2014, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
 			{ date: new Date(2015, 0, 1), branch: 'new-year', data: { location: 'New York, NY', name: 'New Year!', content: 'Celebrate New Years!' } },
-
-
+			// Titanic
+			/*
 			{ date: new Date(1908, 6, 29), branch: 'titanic', data: { details: 'Design approved' } },
 			{ date: new Date(1909, 2, 31), branch: 'titanic', data: { details: 'Keel laid' } },
 			{ date: new Date(1911, 4, 31), branch: 'titanic', data: { details: 'Hull launched' } },
@@ -75,7 +78,7 @@
 			{ date: new Date(1912, 3, 14), branch: 'titanic', data: { details: 'Stikes iceberg' } },
 			{ date: new Date(1912, 3, 15), branch: 'titanic', data: { details: 'Sinks' } },
 			{ date: new Date(1912, 3, 18), branch: 'titanic', data: { details: 'Carpathia arrives in NY' } },
-
+			*/
 		];
 		</script>
 
@@ -85,7 +88,9 @@
     <script>
       jQuery(document).ready(function($) {
         
-        $('#timeline').timeline({ 
+      	var $timeline = jQuery('#timeline');
+
+        $timeline.timeline({ 
         	events: timeline_events, 
 
             vertical: false, // Orientation
@@ -97,8 +102,8 @@
             directionNav: true, // Previous / Next navigation
             directionNavContainer: null, // Selector for nav to be built in
             directionNavBranch: null, // Keep it only in the specified branch
-            directionNextText: 'Next',
-            directionPreviousText: 'Previous',
+            directionNextText: 'Next ->',
+            directionPreviousText: '<- Previous',
 
             eventNav: true, // Single event nav (dots)
             eventNavBranch: 'master', // Branch that those events should navigate
@@ -108,9 +113,25 @@
             
             continuePast: false, // Add styles to 'extend' tl
             continueFuture: false, // Add styles to 'extend' tl
-            startDate: null, // Accepts a Date object and tries to 'start' the tl at that position
+            startDate: new Date(527317200000), // Accepts a Date object and tries to 'start' the tl at that position
             zoom: 2, // "Zoom" in on the timeline
         });
+
+		$timeline.on('timeline.scroll', function(event){ 
+			// /console.log('scroll'); 
+			//console.log( 'scroll date: ' + event.date );
+			//console.log( 'event date: ' + event.current_event.date.getTime() );
+		});
+		//$('#timeline').on('timeline.animationStart', function(){ console.log('animation start'); });
+		$timeline.on('timeline.animationEnd', function(){ console.log('animation end'); });
+
+
+		$('button.nav').on('click', function(){
+			var direction = $(this).attr('data-direction');
+			var branch = $(this).attr('data-branch');
+
+			$timeline.timeline( direction, branch );
+		});
 
       });
     </script>
