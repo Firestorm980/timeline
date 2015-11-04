@@ -115,15 +115,25 @@
             continueFuture: false, // Add styles to 'extend' tl
             startDate: new Date(527317200000), // Accepts a Date object and tries to 'start' the tl at that position
             zoom: 2, // "Zoom" in on the timeline
+
+
+            eventContentShow: true, // Construct 'tooltip' event content 
+            eventContentKeepPastActive: false, // Keep the active class on past event content
+            eventContentPosition: 'top center' // Position of the event information (top, bottom, left, right)
+
         });
 
-		$timeline.on('timeline.scroll', function(event){ 
+		$timeline.on('scroll.timeline', function(event){ 
 			// /console.log('scroll'); 
 			//console.log( 'scroll date: ' + event.date );
 			//console.log( 'event date: ' + event.current_event.date.getTime() );
 		});
-		//$('#timeline').on('timeline.animationStart', function(){ console.log('animation start'); });
-		$timeline.on('timeline.animationEnd', function(){ console.log('animation end'); });
+		$timeline.on('animationEnd.timeline', function( event ){ 
+			/*console.log('animation end');
+			console.log( event.date );
+			console.log( event.current_event );
+			console.log( event.percent );*/
+		});
 
 
 		$('button.nav').on('click', function(){

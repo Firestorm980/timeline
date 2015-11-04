@@ -38,11 +38,17 @@
             continueFuture: false, // Add styles to 'extend' tl
             startDate: null, // Accepts a Date object and tries to 'start' the tl at that position
             zoom: 1, // "Zoom" in on the timeline
-            snap: true
+            snap: true,
+
+            eventContentShow: true, // Construct 'tooltip' event content 
+            eventContentKeepPastActive: false, // Keep the active class on past event content
+            eventContentPosition: 'top center' // Position of the event information (top, bottom, left, right)
+
         },
         rAF = null,
         skip = false,
-        frame = false;
+        frame = false,
+        guid = null;
 
     // The actual plugin constructor
     function Plugin( element, options ) {
@@ -88,7 +94,7 @@
             // Make the base HTML
             instance._construct.call(instance);
 
-            instance._contructEvents.call(instance);
+            instance._constructEvents.call(instance);
             // Make the navigation for next/previous
             if ( instance.settings.directionNav ){
                 instance._constructDirectionNav.call(this);
@@ -97,7 +103,9 @@
             if ( instance.settings.eventNav ){
                 instance._constructEventNav.call(this);
             }
-
+            if ( instance.settings.eventContentShow ){
+                instance._constuctEventContent.call(this);
+            }
             // Set center timeline
             if ( instance.settings.centerProgress ){
                 instance._setCenterTimeline.call(instance);
@@ -215,7 +223,7 @@
                 $element.append(HTML);
             }
         },
-        _contructEvents: function(){
+        _constructEvents: function(){
             var instance = this;
             var element = instance.element;
             var $element = jQuery(element);
@@ -239,6 +247,29 @@
                 // Add the events
                 $events.append(HTML);
             }
+        },
+        _constuctEventContent: function(){
+            var instance = this;
+            var element = instance.element;
+            var $container = null;
+            var events = instance._data.events;
+            var HTML = '';
+
+            if ( !jQuery('.tl__events-container').length ){
+                $container = jQuery('.tl__events-container');jQuery('body').append('<div id="tlEventsContainer-'+GUID+'" class="tl__events-container"></div>');
+            }
+
+            $container = jQuery('.tl__events-container');
+
+            // Loop through and create individual events
+            for (var i = 0; i < events.length; i++) {
+                var event_data = events[i];
+                var event_HTML = instance._tlEvent.createContent.call( this, event_data, i );
+
+                HTML += event_HTML;
+            }
+            // Add the events
+            $container.append(HTML);
         },
         _getMinMaxDates: function( events ){
             var event_dates = [];
@@ -294,6 +325,15 @@
             instance._setBranches.call(instance);
             // Organize events by branches
             instance._setTimelines.call(instance);
+            // Set GUID
+            instance._setGlobalUniqueID.call(instance);
+        },
+        _setGlobalUniqueID: function(){
+            var instance = this;
+            var $element = jQuery(instance.element);
+            var ID = Math.floor(Math.random() * 26) + Date.now();
+
+            GUID = ID;
         },
         _setMinMaxDates: function(){
             var instance = this;
@@ -509,6 +549,7 @@
                     instance._tlScroll.update_date.call( instance );
                     instance._tlScroll.update_events.call( instance );
                     instance._tlScroll.update_branches.call( instance );
+
                     instance._event.call( instance, 'scroll' );
                 });
             }
@@ -532,20 +573,22 @@
                 case 'scroll':
                     // Create an event object
                     event_object = {
-                        type: pluginName + '.' + type,
+                        type: type + '.' + pluginName,
                         date: instance._data.date.current,
                         current_event: instance._data.event_object,
                         percent: instance._data.scroller.percent
                     };
                     // Trigger our special scroll event
                     $element.trigger( event_object );
-
                     break;
                 case 'animationStart':
                 case 'animationEnd':
                     // Create an event object
                     event_object = {
-                        type: pluginName + '.' + type
+                        type: type + '.' + pluginName,
+                        date: instance._data.date.current,
+                        current_event: instance._data.event_object,
+                        percent: instance._data.scroller.percent
                     };
                     // Trigger our special scroll event
                     $element.trigger( event_object );
@@ -560,7 +603,7 @@
                 var instance = this;
                 var scroller_percent = instance._data.scroller.percent;
                 // Get the current date in milliseconds
-                var current_date_time_raw = Math.round( (scroller_percent / 100) * ( instance._data.date.newest - instance._data.date.oldest) + instance._data.date.oldest );
+                var current_date_time_raw = Math.round( (scroller_percent / 100) * (instance._data.date.newest - instance._data.date.oldest) + instance._data.date.oldest );
 
                 // Save the current date
                 // This date is technically inaccurate. 
@@ -644,6 +687,9 @@
                         $event_current.removeClass('is-current');
                     }
                 }
+                if ( instance.settings.eventContentShow ){
+                    instance._tlScroll.update_event_content.call( instance );
+                }
             },
             update_event_nav: function( event_date_time ){
                 var instance = this;
@@ -657,6 +703,65 @@
                 // Update classes
                 $events.removeClass('is-active');
                 $event_current.addClass('is-active');
+            },
+            update_event_content: function( $timeline_event, $container_event ){
+                var instance = this;
+                var $element = jQuery(instance.element);
+                var $branches = $element.find('.tl__branches');
+                var $timeline_events = $branches.find('.tl__event');
+                var $container = jQuery('#tlEventsContainer-'+GUID);
+
+                for (var i = $timeline_events.length - 1; i >= 0; i--) {
+                    var timeline_event = $timeline_events[i];
+                    var $timeline_event = jQuery(timeline_event);
+                    var timeline_event_pos = timeline_event.getBoundingClientRect();
+                    var tl_event_date = parseInt( $timeline_event.attr('data-tl-event-date') );
+                    var tl_event_branch = $timeline_event.attr('data-tl-event-branch');
+                    var $container_event = $container.find('.tl__event-content[data-tl-event-date="'+tl_event_date+'"][data-tl-event-branch="'+tl_event_branch+'"]');
+
+                    instance._tlScroll.update_event_content_position.call( instance, timeline_event, $container_event );
+                    instance._tlScroll.update_event_content_visibility.call( instance, timeline_event, $container_event );
+                }
+            },
+            update_event_content_position: function( timeline_event, $container_event ){
+                var $container = jQuery('body').find('.tl__events-container');
+                var $timeline_event = jQuery(timeline_event);
+                var $timeline_event_marker = $timeline_event.find('.tl__event-marker');
+
+                var timeline_event_pos = $timeline_event_marker[0].getBoundingClientRect();
+                var x = ( timeline_event_pos.left + timeline_event_pos.right ) / 2;
+                var y = ( timeline_event_pos.top + timeline_event_pos.bottom ) / 2;
+                var transform = 'translate3d('+x+'px,'+y+'px, 0)'; // GPU accellerated 
+
+                $container_event.css({ transform: transform, webkitTransform: transform });
+            },
+            update_event_content_visibility: function( timeline_event, $container_event ){
+                var instance = this;
+                var $timeline_event = jQuery(timeline_event);
+
+                if ( instance.settings.eventContentKeepPastActive ){
+                    if ( $timeline_event.hasClass('is-past') || $timeline_event.hasClass('is-current') ){
+                        $container_event.addClass('is-active');
+                    }
+                    else {
+                        $container_event.removeClass('is-active');
+                    }
+                }
+                else {
+                    if ( $timeline_event.hasClass('is-current') ){
+                        $container_event.addClass('is-active');
+                    }
+                    else {
+                        $container_event.removeClass('is-active');
+                    }
+
+                    if ( $timeline_event.hasClass('is-past') ){
+                        $container_event.addClass('is-past');
+                    }
+                    else {
+                        $container_event.removeClass('is-past');
+                    }
+                }
             },
             to_date: function( date, arg_snap ){
                 var instance = this;
@@ -787,10 +892,21 @@
                 var position = instance._getEventPosition.call( this, event_data );
                 var template_HTML = instance.settings.template.call( this, event_data );
                 var is_horizontal = ( !instance.settings.vertical );
-                var event_HTML_array = ( is_horizontal ) ? ['<li class="tl__event" data-tl-event-branch="'+branch+'" style="left: '+position+'%;" data-tl-event-date="'+event_data.date.getTime()+'">','<span class="tl__event-marker">','</span>','<div class="tl__event-content">', template_HTML, '</div>','</li>'] : ['<li class="tl__event" data-tl-event-branch="'+branch+'" style="top: '+position+'%;" data-tl-event-date="'+event_data.date.getTime()+'">','<span class="tl__event-marker">','</span>','<div class="tl__event-content">', template_HTML, '</div>','</li>'];
+                var event_HTML_content = instance._tlEvent.createContent.call( this, event_data );
+                var event_HTML_array = ( is_horizontal ) ? ['<li class="tl__event" data-tl-event-branch="'+branch+'" style="left: '+position+'%;" data-tl-event-date="'+event_data.date.getTime()+'">','<span class="tl__event-marker">','</span>',event_HTML_content,'</li>'] : ['<li class="tl__event" data-tl-event-branch="'+branch+'" style="top: '+position+'%;" data-tl-event-date="'+event_data.date.getTime()+'">','<span class="tl__event-marker">','</span>',event_HTML_content,'</li>'];
                 var event_HTML = event_HTML_array.join('\n');
 
                 return event_HTML;             
+            },
+            createContent: function( event_data ){
+                var instance = this;
+                var branch = event_data.branch;
+                var template_HTML = instance.settings.template.call( this, event_data );
+                var event_content_position = instance.settings.eventContentPosition;
+                var event_HTML_array = ['<div class="tl__event-content" data-tl-event-branch="'+branch+'" data-tl-event-date="'+event_data.date.getTime()+'" data-tl-event-position="'+event_content_position+'">', template_HTML, '</div>'];
+                var event_HTML = event_HTML_array.join('\n');
+
+                return event_HTML; 
             },
             add: function( event_data, index ){
                 var instance = this;
